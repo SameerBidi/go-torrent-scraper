@@ -1,0 +1,15 @@
+/* 
+
+tr td,
+tr th
+{
+  cursor: pointer;
+}
+
+.select-wrapper .caret{
+  fill: white;
+} */
+
+.customContainer {
+  padding: 15px;
+}
