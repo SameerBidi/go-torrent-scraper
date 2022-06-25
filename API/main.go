@@ -61,5 +61,5 @@ func main() {
 	router.GET("/getTorrents", getTorrents)
 	router.GET("/getTorrentData", getTorrentData)
 
-	router.Run("localhost:50001")
+	router.Run("0.0.0.0:50001")
 }

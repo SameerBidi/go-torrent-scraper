@@ -429,7 +429,7 @@ function sendGet(to, data, success, failed) {
 			{
 				type: 'GET',
 				contentType: 'application/json',
-				url: 'http://127.0.0.1:50001/' + to,
+				url: 'http://samcloud.tplinkdns.com:50001/' + to,
 				data: data,
 				dataType: 'json',
 				cache: false,

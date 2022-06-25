@@ -116,7 +116,7 @@ func get1337xTorrentData(link string) torrentData {
 	c := colly.NewCollector(colly.AllowURLRevisit())
 
 	// Rotate two socks5 proxies
-	rp, err := proxy.RoundRobinProxySwitcher("http://siA5rd1dTrk5:18RfJ7bgPe4cyJQ@216.185.35.1:49406")
+	rp, err := proxy.RoundRobinProxySwitcher(getProxies())
 	if err != nil {
 		_ = fmt.Errorf(err.Error())
 	}
