@@ -9,10 +9,13 @@ import (
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
+	goaway "github.com/TwiN/go-away"
 	"github.com/gocolly/colly"
 	"github.com/gocolly/colly/proxy"
 	"github.com/itchyny/timefmt-go"
 )
+
+var siteProxies = map[string][]string{"1337x": {"https://1337xx.to"}}
 
 type torrent struct {
 	Name     string `json:"name"`
@@ -33,7 +36,7 @@ type proxyData struct {
 	Ip string `json:"ip"`
 }
 
-func getProxies() string {
+func GetProxies() string {
 	proxyJsonFilePath := "proxies.json"
 	proxyJsonFile, err := os.Open(proxyJsonFilePath)
 	if err != nil {
@@ -59,67 +62,61 @@ func getProxies() string {
 	return proxyData[0].Ip
 }
 
-func search1337x(searchQuery string) []torrent {
-
+func Search1337x(searchKey string, pageNumber int, safeSearch bool) []torrent {
+	siteProxy := siteProxies["1337x"][0]
 	torrents := make([]torrent, 0)
 
 	c := colly.NewCollector(colly.AllowURLRevisit())
 
-	// Rotate two socks5 proxies
-	rp, err := proxy.RoundRobinProxySwitcher(getProxies())
-	if err != nil {
-		_ = fmt.Errorf(err.Error())
-	}
+	rp, _ := proxy.RoundRobinProxySwitcher(GetProxies())
 	c.SetProxyFunc(rp)
 
 	c.OnHTML("tbody > tr", func(tr *colly.HTMLElement) {
 		a := tr.DOM.Find("td.coll-1 > a").Eq(1)
 		name := a.Text()
 
-		seeders := tr.DOM.Find("td.coll-2").First().Text()
-		seedersInt, _ := strconv.Atoi(seeders)
-		leechers := tr.DOM.Find("td.coll-3").First().Text()
-		leechersInt, _ := strconv.Atoi(leechers)
-		size := tr.DOM.Find("td.coll-4").First().Text()
-		size = strings.Split(size, "B")[0] + "B"
+		if !safeSearch || !goaway.IsProfane(name) {
+			seeders := tr.DOM.Find("td.coll-2").First().Text()
+			seedersInt, _ := strconv.Atoi(seeders)
+			leechers := tr.DOM.Find("td.coll-3").First().Text()
+			leechersInt, _ := strconv.Atoi(leechers)
+			size := tr.DOM.Find("td.coll-4").First().Text()
+			size = strings.Split(size, "B")[0] + "B"
 
-		date := tr.DOM.Find("td.coll-date").First().Text()
-		dateReplacer := strings.NewReplacer("nd", "", "th", "", "rd", "", "st", "")
-		date = dateReplacer.Replace(date)
-		dateFormatted, _ := timefmt.Parse(date, "%b. %d '%y")
+			date := tr.DOM.Find("td.coll-date").First().Text()
+			dateReplacer := strings.NewReplacer("nd", "", "th", "", "rd", "", "st", "")
+			date = dateReplacer.Replace(date)
+			dateFormatted, _ := timefmt.Parse(date, "%b. %d '%y")
 
-		uploader := tr.DOM.Find("td.coll-5").First().Text()
-		link, _ := a.Attr("href")
+			uploader := tr.DOM.Find("td.coll-5").First().Text()
+			link, _ := a.Attr("href")
 
-		torrent := torrent{
-			Name:     name,
-			Seeders:  seedersInt,
-			Leechers: leechersInt,
-			Size:     size,
-			Date:     dateFormatted.Unix(),
-			Uploader: uploader,
-			Link:     "https://1337x.to" + link,
+			torrent := torrent{
+				Name:     name,
+				Seeders:  seedersInt,
+				Leechers: leechersInt,
+				Size:     size,
+				Date:     dateFormatted.Unix(),
+				Uploader: uploader,
+				Link:     siteProxy + link,
+			}
+
+			torrents = append(torrents, torrent)
 		}
-
-		torrents = append(torrents, torrent)
 	})
 
-	c.Visit("https://1337x.to/search/" + searchQuery + "/1/")
+	c.Visit(fmt.Sprintf("%s/search/%s/%d/", siteProxy, searchKey, pageNumber))
 
 	return torrents
 }
 
-func get1337xTorrentData(link string) torrentData {
+func Get1337xTorrentData(link string) torrentData {
 
 	var torrentData torrentData
 
 	c := colly.NewCollector(colly.AllowURLRevisit())
 
-	// Rotate two socks5 proxies
-	rp, err := proxy.RoundRobinProxySwitcher(getProxies())
-	if err != nil {
-		_ = fmt.Errorf(err.Error())
-	}
+	rp, _ := proxy.RoundRobinProxySwitcher(GetProxies())
 	c.SetProxyFunc(rp)
 
 	c.OnHTML("div.col-9.page-content", func(div *colly.HTMLElement) {

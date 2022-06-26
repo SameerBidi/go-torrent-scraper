@@ -46,8 +46,11 @@ function initSites() {
 }
 
 function searchTorrents(siteId) {
-	let torrentCardsHolder = $("#torrentCardsHolder");
-	torrentCardsHolder.empty();
+	let torrentDataDiv = $("#torrentDataDiv");
+	let tbody = torrentDataDiv.find("table > tbody")
+
+	torrentDataDiv.addClass("d-none");
+	tbody.html("");
 
 	let searchKey = $('#searchInput').val();
 	searchKey = searchKey.trim();
@@ -71,120 +74,35 @@ function searchTorrents(siteId) {
 				return;
 			}
 
+			let html = "";
+
 			response.forEach(function(torrent, index) {
+				let tr = 
+						"<tr>" +
+						"<td>" + torrent.name + "</td>" +
+						"<td class='text-success'>" + torrent.seeders + "</td>" +
+						"<td class='text-danger'>" + torrent.leechers + "</td>" +
+						"<td class='text-info'>" + torrent.size + "</td>" +
+						"<td class='text-warning'>" + getDate(torrent.date) + "</td>" +
+						"<td class='text-primary'>" + torrent.uploader + "</td>" +
+						"</tr>";
 
-				let torrentCard = $("#torrentCard").clone(true);
-
-				let idAppend = "_" + siteId + "_" + index;
-				
-				torrentCard.prop("id", torrentCard.prop("id") + idAppend);
-
-				let tDate = torrentCard.find("#tDate");
-				tDate.prop("id", tDate.prop("id") + idAppend);
-				tDate.html(getDate(torrent.date));
-
-				let tName = torrentCard.find("#tName");
-				tName.prop("id", tName.prop("id") + idAppend);
-				tName.html(torrent.name);
-
-				let tSize = torrentCard.find("#tSize");
-				tSize.prop("id", tSize.prop("id") + idAppend);
-				tSize.html(torrent.size);
-
-				let tUploader = torrentCard.find("#tUploader");
-				tUploader.prop("id", tUploader.prop("id") + idAppend);
-				tUploader.html(torrent.uploader);
-
-				let tSeeders = torrentCard.find("#tSeeders");
-				tSeeders.prop("id", tSeeders.prop("id") + idAppend);
-				tSeeders.html("<span class=\"text-light\">[S] </span>" + torrent.seeders);
-
-				let tLeechers = torrentCard.find("#tLeechers");
-				tLeechers.prop("id", tLeechers.prop("id") + idAppend);
-				tLeechers.html("<span class=\"text-light\">[L] </span>" + torrent.leechers);
-
-				let tDataBtn = torrentCard.find("#tDataBtn");
-				let tDataCollapse = torrentCard.find("#tDataCollapse");
-
-				tDataCollapse.prop("id", tDataCollapse.prop("id") + idAppend);
-				tDataBtn.prop("id", tDataBtn.prop("id") + idAppend);
-				tDataBtn.attr("data-bs-target", "#" + tDataCollapse.prop("id"));
-
-				tDataCollapse.on("show.bs.collapse", function() {
-					// tDataBtn.prop("disabled", true);
-					// tDataBtn.addClass("d-none");
-					tDataBtn.remove();
-
-					let tDataStatusText = tDataCollapse.find("#tDataStatusText");
-					tDataStatusText.prop("id", tDataStatusText.prop("id") + idAppend);
-					tDataStatusText.addClass("d-none");
-
-					let tProgressRow = tDataCollapse.find("#tProgressRow");
-					tProgressRow.prop("id", tProgressRow.prop("id") + idAppend);
-					tProgressRow.removeClass("d-none");
-
-					let tDataRow = tDataCollapse.find("#tDataRow");
-					tDataRow.prop("id", tDataRow.prop("id") + idAppend);
-					tDataRow.addClass("d-none");
-
-					let fileHolder = tDataRow.find("#fileHolder");
-					fileHolder.prop("id", fileHolder.prop("id") + idAppend);
-
-					let copyMagnetBtn = tDataRow.find("#copyMagnetBtn");
-					copyMagnetBtn.prop("id", copyMagnetBtn.prop("id") + idAppend);
-
-					let openMagnetBtn = tDataRow.find("#openMagnetBtn");
-					openMagnetBtn.prop("id", openMagnetBtn.prop("id") + idAppend);
-
-					sendGet("sites/" + siteId + "/torrent-data", {"link": torrent.link}, 
-						function (response) {
-							tProgressRow.addClass("d-none");
-							console.log(response);
-							if(!response || !response.magnet) {
-								tDataStatusText.removeClass("d-none");
-								return;
-							}
-							
-							tDataRow.removeClass("d-none");
-
-							response.files.forEach(function(file, index) {
-								let fileNameText = tDataRow.find("#fileNameText").clone(true);
-								fileNameText.prop("id", fileNameText.prop("id") + idAppend);
-
-								let fileNameHr = tDataRow.find("#fileNameHr").clone(true);
-								fileNameHr.prop("id", fileNameHr.prop("id") + idAppend);
-								fileNameHr.removeClass("d-none");
-
-								fileNameText.html(file);
-								fileNameText.removeClass("d-none");
-
-								fileHolder.append(fileNameText);
-								fileHolder.append(fileNameHr);
-							});
-
-							copyMagnetBtn.on("click", function(e) {
-								copyToClipboard(response.magnet);
-								showToast("Magnet copied to clipboard!");
-							});
-
-							openMagnetBtn.on("click", function(e) {
-								window.open(response.magnet);
-							});
-						},
-						function (error) {
-							tProgressRow.addClass("d-none");
-							tDataRow.addClass("d-none");
-							tDataStatusText.removeClass("d-none");
-							console.log(error);
-						}
-					);
-				});
-
-				torrentCard.removeClass("d-none");
-
-				torrentCardsHolder.append(torrentCard);
-				
+				html += tr;
 			});
+
+			$(".torrent-datatable").DataTable().destroy();
+			tbody.html(html);
+			$(".torrent-datatable").DataTable({
+				order: [[1, 'asc']],
+				searching: false,
+				bPaginate: false,
+				bLengthChange: false,
+				bFilter: true,
+				bInfo: false,
+				bAutoWidth: false
+			});
+
+			torrentDataDiv.removeClass("d-none");
 		},
 		function (error) {
 			showProgress(false);
@@ -429,7 +347,7 @@ function sendGet(to, data, success, failed) {
 			{
 				type: 'GET',
 				contentType: 'application/json',
-				url: 'http://localhost:50001/' + to,
+				url: 'http://192.168.191.141:50001/' + to,
 				data: data,
 				dataType: 'json',
 				cache: false,
