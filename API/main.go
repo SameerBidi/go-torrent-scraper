@@ -91,5 +91,5 @@ func main() {
 	router.GET("/sites/:siteId/search/:searchKey", searchTorrents)
 	router.GET("/sites/:siteId/torrent-data", getTorrentData)
 
-	router.Run("localhost:50001")
+	router.RunTLS(":50001", "./TLS/cert.pem", "./TLS/key.pem")
 }
